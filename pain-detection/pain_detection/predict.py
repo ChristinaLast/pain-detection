@@ -5,9 +5,36 @@ import cv2
 import mediapipe as mp
 from hume import HumeStreamClient
 from hume.models.config import LanguageConfig
+import os
+import pickle
+import warnings
+from sklearn.exceptions import DataConversionWarning
+
+# Suppress specific scikit-learn warning
+warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
+
+
+
+
+# Loading with pickle
+with open('models/scaler_100.pkl', 'rb') as file:
+    scaler = pickle.load(file)
+
+# Disable GPU usage by TensorFlow
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+# Check if TensorFlow is using GPU or CPU
+def check_tf_device():
+    if tf.test.gpu_device_name():
+        print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
+    else:
+        print("TensorFlow is using CPU")
+
+check_tf_device()
 
 # Load the trained model
-model = tf.keras.models.load_model("your_model.h5")
+model = tf.keras.models.load_model("models/your_model_100.h5")
+
 
 # Initialize MediaPipe Face Mesh
 mp_face_mesh = mp.solutions.face_mesh
@@ -40,10 +67,16 @@ def extract_features(landmarks):
 
 
 def preprocess_features(features):
-    # Assuming 'features' is a dictionary of extracted features
-    # Convert to a list in the correct order, matching the input format of the model
+    # Convert to a list in the correct order
     feature_list = [features[key] for key in sorted(features)]
-    return np.array([feature_list])  # Convert to a numpy array with shape (1, 7)
+    
+    # Convert to a numpy array and reshape to 2D
+    feature_array = np.array([feature_list])  # Notice the extra brackets
+
+    # Scale the features
+    scaled_features = scaler.transform(feature_array)
+    return scaled_features
+
 
 
 async def main():
@@ -52,7 +85,7 @@ async def main():
         config = LanguageConfig(granularity="sentence")
         async with client.connect([config]) as socket:
             # Read the video
-            cap = cv2.VideoCapture("man in pain clip.mp4")
+            cap = cv2.VideoCapture("videos/man in pain clip.mp4")
             while cap.isOpened():
                 success, image = cap.read()
                 if not success:
@@ -68,7 +101,7 @@ async def main():
 
                         # Preprocess the features to match the input shape of the model
                         processed_features = preprocess_features(frame_features)
-
+                    
                         # Make a prediction
                         prediction = model.predict(processed_features)
                         print("Prediction:", prediction)
@@ -76,18 +109,17 @@ async def main():
                             image, face_landmarks, mp_face_mesh.FACEMESH_CONTOURS
                         )
                 # Display the image (optional)
-                cv2.imshow(
-                    "MediaPipe Face Mesh", cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-                )
-                if cv2.waitKey(5) & 0xFF == 27:
-                    break
-            cap.release()
-            cv2.destroyAllWindows()
+                # cv2.imshow(
+                #     "MediaPipe Face Mesh", cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+                # )
+            #     if cv2.waitKey(5) & 0xFF == 27:
+            #         break
+            # cap.release()
+            # cv2.destroyAllWindows()
             # Make a prediction
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        traceback.print_exc()
 
 
 # Run the main function in the event loop
