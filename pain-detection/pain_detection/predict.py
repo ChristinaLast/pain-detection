@@ -31,8 +31,8 @@ def create_model():
     model = tf.keras.Sequential(
         [
             tf.keras.layers.Dense(
-                19, activation="tanh", input_shape=(19,)
-            ),  # First layer with 19 neurons
+                7, activation="tanh", input_shape=(7,)
+            ),  # First layer with 7 neurons
             tf.keras.layers.Dense(
                 5, activation="sigmoid"
             ),  # Second layer with 5 neurons
@@ -49,12 +49,12 @@ first_layer_biases = np.array(b[0, 0]).flatten()
 
 # Correct weights for the second layer
 second_layer_weights = np.random.rand(
-    5, 19
+    5, 7
 )  # Initialize if correct weights not available
 second_layer_biases = np.array(b[1, 0]).flatten()
 
 # Transpose second layer weights to match TensorFlow's expected shape
-second_layer_weights = second_layer_weights.T  # Transpose to shape (19, 5)
+second_layer_weights = second_layer_weights.T
 
 model.layers[0].set_weights([first_layer_weights, first_layer_biases])
 model.layers[1].set_weights([second_layer_weights, second_layer_biases])
@@ -102,7 +102,7 @@ def preprocess_features(features):
     # Assuming 'features' is a dictionary of extracted features
     # Convert to a list in the correct order, matching the input format of the model
     feature_list = [features[key] for key in sorted(features)]
-    return np.array([feature_list])  # Convert to a numpy array with shape (1, 19)
+    return np.array([feature_list])  # Convert to a numpy array with shape (1, 7)
 
 
 async def main():
